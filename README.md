@@ -68,4 +68,10 @@ h =
    0.067401855849468
   -0.036180025458648
   
-This happens, most probably, because of ways to circumvent Ci(0) (cosine integral) and cos(x)/x. How, I don't know, but, initially, I forced the starting frequency to be 1e-6 instead of zero, but that yielded large numbers for the q and b vectors, which, no doubt, took their toll on precision. Now I simply forced the values to come out as zero for cos(x)/x, and Ci(k*1e-6) for the cosine integral.
+This happens, most probably, because of ways to circumvent Ci(0) (cosine integral) and cos(0)/0. How, I don't know, but, initially, I forced the starting frequency to be 1e-6 instead of zero, but that yielded large numbers for the q and b vectors, which, no doubt, took their toll on precision. Now I simply forced the values to come out as zero for cos(0)/0, and Ci(0) for the cosine integral.
+
+---
+
+Octave's expint() has numerical problems for purely imaginary arguments (which are needed here), and they go worse as the argument's value increases. Temporary solution: create a separate variant for the exponential integral, E1(x), and use that.
+
+With this change, the numbers come out just as with wxMaxima's and, given the existent examples, I dare say my results are better than Matlab's. If I am wrong, I am wrong, my apologies to the giant, but I only say this after I plot diff(abs(fft(h))), which shows a clear difference between the two results, with a much better ripple towards DC, and a visible 1/f^2 progressiob of the ripples.
