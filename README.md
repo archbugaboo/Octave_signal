@@ -74,4 +74,4 @@ This happens, most probably, because of ways to circumvent Ci(0) (cosine integra
 
 Octave's expint() has numerical problems for purely imaginary arguments (which are needed here), and they go worse as the argument's value increases. Temporary solution: create a separate variant for the exponential integral, E1(x), and use that.
 
-With this change, the numbers come out just as with wxMaxima's and, given the existent examples, I dare say my results are better than Matlab's. If I am wrong, I am wrong, my apologies to the giant, but I only say this after I plot diff(abs(fft(h))), which shows a clear difference between the two results, with a much better ripple towards DC, and a visible 1/f^2 progressiob of the ripples.
+With this change, the numbers come out just as with wxMaxima's and, given the existent examples, I dare say my results are better than Matlab's. If I am wrong, I am wrong, my apologies to the giant, but I only say this after I plot diff(abs(fft(h))), which shows a clear difference between the two results, with a much better ripple towards DC, and a visible 1/f^2 progression of the ripples.
