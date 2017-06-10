@@ -202,14 +202,9 @@ end
 
 # make sure the vectors are rows
 A = A(:)';
-## Rather than having checks at each step, if F(1)==0 adjust the frequency
-## vector from the very beginning; 1e-6 should be low enough not to influence
-## the results, while also not causing numerical instabilities.
-#if(F(1) == 0)
-#  F(1) = 1e-6;
-#end
 F = F(:)';
-# make the weights the same length as F and A, to handle linear weighting
+## Make K the same length as F and A, to avoid indexing with floor((i+1)/2.
+## Also make it alternating signs, to avoid the need of (-1)^n later on.
 K = [-K; K](:)';
 
 # prepare a few helpers
@@ -220,8 +215,9 @@ A0 = fType*(1 - oddN);
 pi2 = pi/2;
 i1 = 1:2:bands;
 i2 = 2:2:bands;
+## Non-zero band check. Note: this doesn't work for Hilbert transformer.
 bandTest = A(i1) + A(i2);
-bandTest = [bandTest; bandTest](:)'; # non-zero band check
+bandTest = [bandTest; bandTest](:)';
 
 ################################################################################
 ## Using 1/f^2 weighting means starting from the definition of q with W = 1/w^2
@@ -254,16 +250,19 @@ if(f2) # 1/f^2 weighting
       if(m == 1) # take care of F(1)=0
         q -= 0.0;
       else
-        q -= ghostTweak*K(m)*(-pi*n.*(imag(expint(1i*n*w(m))) + pi2) - ...
+        ## TODO Octave's builtin expint() has numerical issues for purely
+        ## imaginary arguments that are worse as the argument's value increases.
+        ## For now, make a separate implementation with the name E1(x).
+        q -= ghostTweak*K(m)*(-pi*n.*(imag(E1(1i*n*w(m))) + pi2) - ...
           cos(n*w(m))/F(m));
       end
     else
-      q -= F(m)*sinc(n*F(m))*K(m);
+      q -= K(m)*F(m)*sinc(n*F(m));
     end
   end
 else
   for(m = 1:bands)
-    q += F(m)*sinc(n*F(m))*K(m);
+    q += K(m)*F(m)*sinc(n*F(m));
   end
 end
 
@@ -274,7 +273,7 @@ Q = toeplitz(q(1 : M+1-A0)) + ...
 ################################################################################
 ## In the same way q was derived, for the b vector, D(w) is a piecewise linear
 ## function, so it can be approximated as ax+b. The derivation is shown for
-## sine, it's similar for cosine:
+## sine, it's similar for cosine (needed only for types I and II):
 ##
 ##      ,-
 ##     /  (a*f + b)*sin(n*pi*f)
@@ -288,74 +287,77 @@ Q = toeplitz(q(1 : M+1-A0)) + ...
 ## and ax+b is the linear interpolation of A and F vectors:
 ##
 ##  A[n+1] - A[n]
-## ---------------*(x - f[n]) + A[n]
-##  f[n+1] - f[n]
+## ---------------*(x - F[n]) + A[n]
+##  F[n+1] - F[n]
 ################################################################################
 # adapted from original firls.m to include all types (I - IV) of filters.
-k = (A0+0.5*oddN : M+0.5*oddN)'; # make column vector from the start
+n = (A0+0.5*oddN : M+0.5*oddN)'; # make column vector from the start
 if(oddN)
-  k2 = k;
-  k3 = k;
+  n2 = n;
+  n3 = n;
 else
-  k2 = k(2:end);
-  k3 = [1; k(2:end)];
+  n2 = n(2:end);
+  n3 = [1; n(2:end)];
 end
 ## First check for 1/f^2, even if the order looks awkward, because the expint
 ## only needs to be calculated once, then picked apart with real() and imag().
 ## TODO if(for(if(if())))...?
 if(f2) # 1/f^2 weighting
-  sc = zeros(size(k));
-  dif = zeros(size(k));
-  tmp = zeros(size(k));
-  for(m = 1:bands) # types III, IV
+  sc = zeros(size(n));
+  dif = zeros(size(n));
+  tmp = zeros(size(n));
+  for(m = 1:bands) # passband only
     l = m - 1 + mod(m, 2);
     if(bandTest(m)) # apply 1/f^2 weighting in the passband, only
       slope = (A(l+1) - A(l))/(F(l+1) - F(l));
       intercept = -slope*F(m) + A(m);
       if(m == 1) # take care of F(1)=0
-        #tmp = expint(1.0e-6i*k); # avoid real(expint(0))=Inf
-        sc += -K(m)*intercept*pi*k; # K(m) acts as (-1)^m
+        ## It seems there's no difference with/without tmp for F(1)=0, so just
+        ## consider the singularities for Ci(x) and cos(x)/x as zero. This way
+        ## numerical problems for large numbers are avoided in the case of
+        ## e.g. Ci(1e-6), or cos(1e-6)/1e-6.
+        sc += -K(m)*intercept*pi*n;
       else
-        tmp = expint(1.0i*k*w(m));
+        tmp = E1(1.0i*n*w(m));
         sc += K(m)*(slope*(imag(tmp) + pi2) + ...
-          intercept*(pi*k.*(-real(tmp)) - sin(k*w(m))/F(m)));
+          intercept*(pi*n.*(-real(tmp)) - sin(n*w(m))/F(m)));
       end
-    else # types I, II
+    else # stopband only
       AK = A(m)*K(m);
       if(!oddN && !fType) # odd lengths need special treatment
         sc += AK*[w(m); sin(k2*w(m))];
         dif += AK*[0.5*(w(l)^2 - w(l+1)^2)/(w(l+1) - w(l)); ...
           (cos(k2*w(l+1)) - cos(k2*w(l)))./(k2*(w(l+1) - w(l)))];
       else
-        sc += AK*sin(k*w(m));
-        dif += AK*(cos(k*w(l+1)) - cos(k*w(l)))./(k*(w(l+1) - w(l)));
+        sc += AK*sin(n*w(m));
+        dif += AK*(cos(n*w(l+1)) - cos(n*w(l)))./(n*(w(l+1) - w(l)));
       end
     end
   end
   # b vector
   b = ghostTweak*(dif + sc);
 else # K decides the weighting
-  sc = zeros(length(k), bands);
-  dif = zeros(length(k), bands/2);
+  sc = zeros(length(n), bands);
+  dif = zeros(length(n), bands/2);
   if(fType) # types III, IV
-    sc = -cos(k*w);
-    dif = [sin(k*w(i2)) - sin(k*w(i1))]./(k*(w(i2) - w(i1)));
+    sc = -cos(n*w);
+    dif = [sin(n*w(i2)) - sin(n*w(i1))]./(n*(w(i2) - w(i1)));
   else # types I, II
     if(!oddN) # odd lengths need special treatment
       sc = [w; sin(k2*w)];
       dif = [0.5*(w(i1).^2 - w(i2).^2)./(w(i2) - w(i1)); ...
         (cos(k2*w(i2)) - cos(k2*w(i1)))./(k2*(w(i2) - w(i1)))];
     else
-      sc = sin(k*w);
-      dif = (cos(k*w(i2)) - cos(k*w(i1)))./(k*(w(i2) - w(i1)));
+      sc = sin(n*w);
+      dif = (cos(n*w(i2)) - cos(n*w(i1)))./(n*(w(i2) - w(i1)));
     end
   end
   # b vector
-  b = (kron(dif, [1, 1]) + sc)*(K.*A)(:)./(pi*k3);
+  b = (kron(dif, [1, 1]) + sc)*(K.*A)(:)./(pi*n3);
 end
 
 # the rest of the algorithm
-a = Q \ b;
+a = Q\b;
 
 # form the impulse response
 if(oddN)
