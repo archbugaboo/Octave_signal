@@ -17,8 +17,7 @@
 ## @deftypefn  {Function File} {@var{y} =} expint (@var{x})
 ## @deftypefnx {Function File} {@var{y} =} expint (@var{x}, @var{eps})
 ##
-## Exponential integral of the 1st order, according to Abramowitz&Stegun 5.1.1,
-## defined as:
+## Exponential integral of the 1st order, Abramowitz & Stegun 5.1.1, defined as:
 ##
 ## @tex
 ## $$
@@ -42,13 +41,16 @@
 ##
 ## The exponential integral is calculated with a recursion method, involving
 ## either a power series (with fast convergence for low values of @var{x}), and
-## an continuous fraction expansion (with asymptotic convergence). The value of
-## 4 has been chosen as a compromise, in terms of iterations, for swwitching
-## between the two methods. If, after 100 iterations the result hasn't converged
-## within the specified limits, the loop exits with the last obtained number.
+## a continuous fraction expansion (with asymptotic convergence). The value of
+## 4 has been chosen as a compromise, in terms of iterations, for switching
+## between the two methods. If, after 100 iterations, the result hasn't
+## converged within the specified limits, the loop exits with the last obtained
+## number.
 ##
 ## The code has been adapted from W. H. Press, S. A. Teukolsky, W. T. Vetterling
-## "Numerical recipes. The Art of Scientific Computing".
+## "Numerical recipes. The Art of Scientific Computing", itself based after
+## Abramowitz & Stegun 5.1.11 and 5.1.22 (using every other term, for faster
+## convergence).
 ##
 ## @end deftypefn
 
@@ -61,14 +63,14 @@ if((length(varargin) == 1) && ((ischar(varargin{1})) || (varargin{1} <= 0)))
 end
 
 if(length(varargin) == 0)
-  EPS = 1e-15;
+  EPS = 1e-15; # defaults to within one decimal of a double
 else
   EPS = varargin{1};
 end
 
 y = zeros(size(x));
 for(n = 1:numel(x))
-  ## 4 seems a reasonable value for equally splitting the load
+  ## 4 seems a reasonable value for about the same iterations
   if(abs(x(n)) > 4.0) # modfied Lentz splitting algorithm
     b = x(n) + 1.0;
     C = 1e30;
@@ -89,14 +91,14 @@ for(n = 1:numel(x))
     end
     #sprintf('The continuous fraction expansion failed after 100 iterations.')
     #y(n) *= exp(-x(n));
-  else
+  else # series expansion
     y(n) = -0.5772156649015328606065120900824-log(x(n));
     f = 1.0; # reusing same name variables
     for(k = 1:100)
       f *= -x(n)/k;
       C = -f/k;
       y(n) += C;
-      if(abs(C) < abs(y)*EPS)
+      if(abs(C) < abs(y(n))*EPS)
         #sprintf('%f,',x(n),n,k)
         #y(n) = y(n);
         break;
