@@ -325,9 +325,9 @@ if(f2) # 1/f^2 weighting
     else # stopband only
       AK = A(m)*K(m);
       if(!oddN && !fType) # odd lengths need special treatment
-        sc += AK*[w(m); sin(k2*w(m))];
+        sc += AK*[w(m); sin(n2*w(m))];
         dif += AK*[0.5*(w(l)^2 - w(l+1)^2)/(w(l+1) - w(l)); ...
-          (cos(k2*w(l+1)) - cos(k2*w(l)))./(k2*(w(l+1) - w(l)))];
+          (cos(n2*w(l+1)) - cos(n2*w(l)))./(n2*(w(l+1) - w(l)))];
       else
         sc += AK*sin(n*w(m));
         dif += AK*(cos(n*w(l+1)) - cos(n*w(l)))./(n*(w(l+1) - w(l)));
@@ -344,9 +344,9 @@ else # K decides the weighting
     dif = [sin(n*w(i2)) - sin(n*w(i1))]./(n*(w(i2) - w(i1)));
   else # types I, II
     if(!oddN) # odd lengths need special treatment
-      sc = [w; sin(k2*w)];
+      sc = [w; sin(n2*w)];
       dif = [0.5*(w(i1).^2 - w(i2).^2)./(w(i2) - w(i1)); ...
-        (cos(k2*w(i2)) - cos(k2*w(i1)))./(k2*(w(i2) - w(i1)))];
+        (cos(n2*w(i2)) - cos(n2*w(i1)))./(n2*(w(i2) - w(i1)))];
     else
       sc = sin(n*w);
       dif = (cos(n*w(i2)) - cos(n*w(i1)))./(n*(w(i2) - w(i1)));
