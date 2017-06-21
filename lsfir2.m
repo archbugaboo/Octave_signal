@@ -127,7 +127,7 @@ function h = firls(N, F, A, varargin);
 # nr or arguments must be 3, 4, or 5
 narginchk(3, 5);
 
-# order error check
+# order must be a one one element vector
 if(length(N) != 1)
   error("The order (N) must be a vector of size 1.")
 end
@@ -193,19 +193,42 @@ if(length(varargin) == 2)
 end
 
 # check the lengths of the vectors
-if((length(F) != length(A)) && (length(varargin{1}) != length(F)/2))
-  error("The sizes of the frequency and magnitude vectors must be equal, and the weights vector must be half their size.")
+if(length(F) != length(A))
+  error("The sizes of the frequency and magnitude vectors must be equal.")
 end
+
+if((length(varargin) >= 1) && !ischar(varargin{1}) && ...
+    (length(varargin{1}) != length(F)/2))
+  error("The length of the weights vector must be half the length of the frequencies', or the amplitudes'.")
+end
+
 if(rem(length(F), 2) || rem(length(A), 2))
   error("The frequency and weight vectors must have an even size greater than or equal to 2.")
 end
+
+## Lengths alright? Check for correctness.
+
+if(sum(diff(F) <= 0))
+  error("The frequencies must be strictly increasing.")
+end
+
+if(find(F > 1))
+  error("The frequencies must lie in the interval [0..1], with 1 being Nyquist.")
+end
+
+if((length(F) != 2) && ((F(1) != 0) || (F(end) != 1)))
+  error("The frequency vector must start at 0 and end with 1.")
+end
+
+# silently consider the integer part of N
+N = fix(N);
 
 # make sure the vectors are rows
 A = A(:)';
 F = F(:)';
 ## Make K the same length as F and A, to avoid indexing with floor((i+1)/2.
 ## Also make it alternating signs, to avoid the need of (-1)^n later on.
-K = [-K; K](:)';
+K = [-abs(K); abs(K)](:)';
 
 # prepare a few helpers
 M = floor(N/2);
@@ -250,9 +273,6 @@ if(f2) # 1/f^2 weighting
       if(m == 1) # take care of F(1)=0
         q -= 0.0;
       else
-        ## TODO Octave's builtin expint() has numerical issues for purely
-        ## imaginary arguments that are worse as the argument's value increases.
-        ## For now, make a separate implementation with the name E1(x).
         q -= ghostTweak*K(m)*(-pi*n.*(imag(E1(1i*n*w(m))) + pi2) - ...
           cos(n*w(m))/F(m));
       end
@@ -325,9 +345,9 @@ if(f2) # 1/f^2 weighting
     else # stopband only
       AK = A(m)*K(m);
       if(!oddN && !fType) # odd lengths need special treatment
-        sc += AK*[w(m); sin(n2*w(m))];
+        sc += AK*[w(m); sin(k2*w(m))];
         dif += AK*[0.5*(w(l)^2 - w(l+1)^2)/(w(l+1) - w(l)); ...
-          (cos(n2*w(l+1)) - cos(n2*w(l)))./(n2*(w(l+1) - w(l)))];
+          (cos(k2*w(l+1)) - cos(k2*w(l)))./(k2*(w(l+1) - w(l)))];
       else
         sc += AK*sin(n*w(m));
         dif += AK*(cos(n*w(l+1)) - cos(n*w(l)))./(n*(w(l+1) - w(l)));
@@ -344,9 +364,9 @@ else # K decides the weighting
     dif = [sin(n*w(i2)) - sin(n*w(i1))]./(n*(w(i2) - w(i1)));
   else # types I, II
     if(!oddN) # odd lengths need special treatment
-      sc = [w; sin(n2*w)];
+      sc = [w; sin(k2*w)];
       dif = [0.5*(w(i1).^2 - w(i2).^2)./(w(i2) - w(i1)); ...
-        (cos(n2*w(i2)) - cos(n2*w(i1)))./(n2*(w(i2) - w(i1)))];
+        (cos(k2*w(i2)) - cos(k2*w(i1)))./(k2*(w(i2) - w(i1)))];
     else
       sc = sin(n*w);
       dif = (cos(n*w(i2)) - cos(n*w(i1)))./(n*(w(i2) - w(i1)));
@@ -371,3 +391,24 @@ else
 end
 
 endfunction
+
+%% tests
+%!error h = lsfir2()
+%!error h = lsfir2(9)
+%!error h = lsfir2(9, 1)
+%!error h = lsfir2(9, 1, 2)
+%!error h = lsfir2(9, 1, 2, 3)
+%!error h = lsfir2(9, 1, 2, 3, 4)
+%!error h = lsfir2(9, 1, 2, 3, 4, 5)
+%!error h = lsfir2(9.9)
+%!error h = lsfir2(9, [])
+%!error h = lsfir2(9, [], [])
+%!error h = lsfir2(9, [], [], [])
+%!error h = lsfir2(9, [0 .2 .3 1], [1 2 3])
+%!error h = lsfir2(9, [.2 .5], 1)
+%!error h = lsfir2(9, 1, [1 2])
+%!error h = lsfir2(9, [.1 .6 .9 1], [1 1 0 0])
+%!error h = lsfir2(9, [0 .3 .6 1.3], [1 1 0 0])
+%!error h = lsfir2(9, [0 .6 .3 1], [1 1 0 0])
+%!error h = lsfir2(9, [0 .3 .6 1], [1 1 0 0], 1)
+%!error h = lsfir2(9, [0 .3 .6 1], [1 1 0 0], 'bla')
