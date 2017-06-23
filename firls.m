@@ -132,7 +132,7 @@ if(length(N) != 1)
   error("The order (N) must be a vector of size 1.")
 end
 # ...and proper valued
-if(N <= 0)
+if((N <= 0) || ischar(N))
   error("The order (N) must be positive definite.")
 end
 
@@ -414,6 +414,7 @@ endfunction
 %!error h = firls(9, 1, [1 2])
 %!error h = firls(9, [-.1 .6 .9 1], [1 1 0 0])
 %!error h = firls(-9, [0 .6 .9 1], [1 1 0 0])
+%!error h = firls('x', [0 .6 .9 1], [1 1 0 0])
 %!error h = firls(9, [0 .3 .6 1.3], [1 1 0 0])
 %!error h = firls(9, [0 .6 .3 1], [1 1 0 0])
 %!error h = firls(9, [0 .3 .6 1], [1 1 0 0], 1)
