@@ -127,9 +127,13 @@ function h = firls(N, F, A, varargin);
 # nr or arguments must be 3, 4, or 5
 narginchk(3, 5);
 
-# order must be a one one element vector
+# order must be a one one element vector...
 if(length(N) != 1)
   error("The order (N) must be a vector of size 1.")
+end
+# ...and proper valued
+if(N <= 0)
+  error("The order (N) must be positive definite.")
 end
 
 # handle the possible cases
@@ -212,7 +216,7 @@ if(sum(diff(F) <= 0))
   error("The frequencies must be strictly increasing.")
 end
 
-if(find(F > 1))
+if((F(1) < 0) || (F(end) > 1))
   error("The frequencies must lie in the interval [0..1], with 1 being Nyquist.")
 end
 
@@ -393,23 +397,25 @@ end
 endfunction
 
 %% tests
-%!error h = lsfir2()
-%!error h = lsfir2(9)
-%!error h = lsfir2(9, 1)
-%!error h = lsfir2(9, 1, 2)
-%!error h = lsfir2(9, 1, 2, 3)
-%!error h = lsfir2(9, 1, 2, 3, 4)
-%!error h = lsfir2(9, 1, 2, 3, 4, 5)
-%!error h = lsfir2(9.9)
-%!error h = lsfir2(9, [])
-%!error h = lsfir2(9, [], [])
-%!error h = lsfir2(9, [], [], [])
-%!error h = lsfir2(9, [0 .2 .3 1], [1 2 3])
-%!error h = lsfir2(9, [.2 .5], 1)
-%!error h = lsfir2(9, 1, [1 2])
-%!error h = lsfir2(9, [.1 .6 .9 1], [1 1 0 0])
-%!error h = lsfir2(9, [0 .3 .6 1.3], [1 1 0 0])
-%!error h = lsfir2(9, [0 .6 .3 1], [1 1 0 0])
-%!error h = lsfir2(9, [0 .3 .6 1], [1 1 0 0], 1)
-%!error h = lsfir2(9, [0 .3 .6 1], [1 1 0 0], 'bla')
-%!error h = lsfir2("9", [0 .3 .6 1], [1 1 0 0])
+%!error h = firls()
+%!error h = firls(9)
+%!error h = firls([1, 2])
+%!error h = firls(9, 1)
+%!error h = firls(9, 1, 2)
+%!error h = firls(9, 1, 2, 3)
+%!error h = firls(9, 1, 2, 3, 4)
+%!error h = firls(9, 1, 2, 3, 4, 5)
+%!error h = firls(9.9)
+%!error h = firls(9, [])
+%!error h = firls(9, [], [])
+%!error h = firls(9, [], [], [])
+%!error h = firls(9, [0 .2 .3 1], [1 2 3])
+%!error h = firls(9, [.2 .5], 1)
+%!error h = firls(9, 1, [1 2])
+%!error h = firls(9, [-.1 .6 .9 1], [1 1 0 0])
+%!error h = firls(-9, [0 .6 .9 1], [1 1 0 0])
+%!error h = firls(9, [0 .3 .6 1.3], [1 1 0 0])
+%!error h = firls(9, [0 .6 .3 1], [1 1 0 0])
+%!error h = firls(9, [0 .3 .6 1], [1 1 0 0], 1)
+%!error h = firls(9, [0 .3 .6 1], [1 1 0 0], 'bla')
+%!error h = firls("9", [0 .3 .6 1], [1 1 0 0])
