@@ -16,9 +16,13 @@
 
 ## -*- texinfo -*-
 ## @deftypefn  {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a})
+## @deftypefn  {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{x})
 ## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{k})
+## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{k}, @var{x})
 ## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{ftype})
+## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{ftype}, @var{x})
 ## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{k}, @var{ftype})
+## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{k}, @var{ftype}, @var{x})
 ##
 ## FIR filter design using least squares method. Returns a length @var{n}+1
 ## linear phase filter such that the integral of the weighted mean
@@ -44,16 +48,22 @@
 ## The vector @var{a} specifies the amplitude of the desired response at each
 ## band edge.
 ##
-## The optional argument @var{k} is a weighting function that contains one
-## value for each band that weights the mean squared error in that band. When
-## not specified, it means the weights are one across all bands.
+## The vector @var{k} is a weighting function that contains one value for each
+## band that weights the mean squared error in that band. When not specified,
+## it means the weights are one across all bands.
 ##
-## Also optional is @var{ftype}, of type string, which can be either null, '',
-## or one of 'd', 'differentiator', 'h', 'Hilbert', or 'hilbert'. When
-## specified, it will create a type III or IV FIR, which can also be a
-## differentiator or a Hilbert transformer. The default option for
-## differentiators is to have 1/f^2 weighting. If normal weighting is desired,
-## use instead 'h'.
+## @var{ftype} is of type string, which can be either null (''), or one of 'd',
+## 'differentiator', 'h', 'Hilbert', or 'hilbert'. When specified, it will
+## create a type III or IV FIR, which can also be a differentiator or a Hilbert
+## transformer. The default option for differentiators is to have 1/f^2
+## weighting. If normal weighting is desired, use instead 'h'.
+##
+## The optional argument @var{x} is either an empty string, '' or "" (i.e.
+## unspecified, default), meaning it will behave the way Matlab's firls.m does:
+## for type II and IV FIRs that have non-zero amplitude near Nyquist, N will be
+## incremented behind your back if odd. Non-zero amplitude at DC for types III
+## and IV is unaffected. If @var{x} is 'x', N will be unaffected, leaving the
+## responsability of having a correct result to the user.
 ##
 ## @var{a} must be the same length as @var{f}, and @var{k} must be half the
 ## length of @var{f}. @var{n} can be odd or even, and the resulting filters do
@@ -113,7 +123,7 @@
 function h = firls (N, F, A, varargin);
 
 ## Nr or arguments must be 3, 4, or 5
-narginchk (3, 5);
+narginchk (3, 6);
 
 ## Order must be a one one element vector...
 if (length (N) != 1)
@@ -125,25 +135,30 @@ if ((N <= 0) || ischar (N))
 endif
 
 ## Handle the possible cases
-oddN = mod (N, 2);
+X = true;  # defaults to true, modify only according to varargin
 
 ## Three arguments => types I and II FIRs, unity weights
 if (nargin == 3)
-  K = ones (size (F(1:2:end)));
+  K = ones (1, length (F)/2);
   fType = 0;
   f2 = 0;
 endif
 
 ## Four arguments
 if (length (varargin) == 1)
-  if (ischar (varargin{1})) # diff or HT
+  if (ischar (varargin{1})) # diff or HT, or 'x'
     K = ones (1, length (F)/2);
-    fType = 1;
     switch (varargin{1})  # check that ftype is a proper char
       case {"h" "Hilbert" "hilbert"}
         f2 = 0;
+        fType = 1;
       case {"d" "differentiator"}
         f2 = 1;
+        fType = 1;
+      case {"x"}
+        X = false;
+        fType = 0;
+        f2 = 0;
       otherwise
         print_usage()
     endswitch
@@ -154,8 +169,46 @@ if (length (varargin) == 1)
   endif
 endif
 
-## Full spec
+## Five arguments
 if (length (varargin) == 2)
+  if (isnumeric (varargin{1}))  # if it's a number, it's K, then fType/X
+    K = varargin{1};
+    switch (varargin{2})  # check that ftype is a proper char
+      case {"h" "Hilbert" "hilbert"}
+        f2 = 0;
+        fType = 1;
+      case {"d" "differentiator"}
+        f2 = 1;
+        fType = 1;
+      case {"x"}
+        X = false;
+        f2 = 0;
+        fType = 0;
+      otherwise
+        print_usage()
+    endswitch
+  else  # it's fType and X
+    K = ones (1, length (F)/2);
+    switch (varargin{1})  # check that ftype is a proper char
+      case {"h" "Hilbert" "hilbert"}
+        f2 = 0;
+        fType = 1;
+      case {"d" "differentiator"}
+        f2 = 1;
+        fType = 1;
+      otherwise
+        error ("'fType' can only be one of 'd', 'differentiator', 'h', 'Hilbert', or 'hilbert'.")
+    endswitch
+    if ( strcmpi ("x", varargin{2}) )
+      X = false;
+    else
+      error ("'X' can only be one of '' or 'x'.")
+    endif
+  endif
+endif
+
+## Six arguments
+if (length (varargin) == 3)
   fType = 1;  # it can only be one of the types III or IV
   if (isnumeric (varargin{1}))  # make sure K is a number
     K = varargin{1};
@@ -168,8 +221,13 @@ if (length (varargin) == 2)
     case {"d" "differentiator"}
       f2 = 1;
     otherwise
-      print_usage()
+      error ("'fType' can only be one of 'd', 'differentiator', 'h', 'Hilbert', or 'hilbert'.")
   endswitch
+  if ( strcmpi ("x", varargin{3}) )
+    X = false;
+  else
+    error ("'X' can only be one of '' or 'x'.")
+  endif
 endif
 
 ## Check the lengths of the vectors
@@ -203,7 +261,13 @@ if ((length (F) > 2) && mod (F, 2))
   error ("The frequency vector must have an even length.")
 endif
 
-N = fix (N);  # silently consider the integer part of N
+## Silently consider the integer part of N
+if (X && F(end) && (mod (N, 2) != 0))
+  N = fix (N) + 1;
+  sprintf ("Type II and IV FIRs can't have non-zero amplitude at Nyquist; N has been incremented.")
+else
+  N = fix (N);
+endif
 
 ## Make sure the vectors are columns
 A = A(:)';
@@ -213,6 +277,7 @@ F = F(:)';
 K = [-abs(K); abs(K)](:)';
 
 ## Prepare a few helpers
+oddN = mod (N, 2);
 M = floor (N/2);
 bands = length (F);
 w = F*pi;
