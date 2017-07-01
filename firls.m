@@ -16,13 +16,13 @@
 
 ## -*- texinfo -*-
 ## @deftypefn  {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a})
-## @deftypefn  {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{x})
+## @deftypefn  {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{MatlabCompat})
 ## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{k})
-## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{k}, @var{x})
+## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{k}, @var{MatlabCompat})
 ## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{ftype})
-## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{ftype}, @var{x})
+## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{ftype}, @var{MatlabCompat})
 ## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{k}, @var{ftype})
-## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{k}, @var{ftype}, @var{x})
+## @deftypefnx {Function File} {@var{b} =} firls (@var{n}, @var{f}, @var{a}, @var{k}, @var{ftype}, @var{MatlabCompat})
 ##
 ## FIR filter design using least squares method. Returns a length @var{n}+1
 ## linear phase filter such that the integral of the weighted mean
@@ -38,12 +38,13 @@
 ## differentiators, or Hilbert transformers, all with unity weights.
 ##
 ## b = firls (@var{n}, @var{f}, @var{a}, @var{k}, @var{ftype}) creates all
-## types of FIRs, differentiators. Hilbert transformers can also be made, but
-## the weights do not count.
+## types of weighted FIRs, differentiators, and Hilbert transformers.
 ##
 ## The vector @var{f} specifies the frequencies of the band edges, normalized
 ## so that half the sample frequency is equal to 1.  Each band is specified by
-## two frequencies, so the vector must have an even length.
+## two frequencies, so the vector must have an even length, including DC and
+## Nyquist. Exception makes the Hilbert transformer, which only needs a pair of
+## frequencies.
 ##
 ## The vector @var{a} specifies the amplitude of the desired response at each
 ## band edge.
@@ -56,14 +57,14 @@
 ## 'differentiator', 'h', 'Hilbert', or 'hilbert'. When specified, it will
 ## create a type III or IV FIR, which can also be a differentiator or a Hilbert
 ## transformer. The default option for differentiators is to have 1/f^2
-## weighting. If normal weighting is desired, use instead 'h'.
+## weighting. If normal weighting is desired, use 'h' instead.
 ##
-## The optional argument @var{x} is either an empty string, '' or "" (i.e.
-## unspecified, default), meaning it will behave the way Matlab's firls.m does:
-## for type II and IV FIRs that have non-zero amplitude near Nyquist, N will be
-## incremented behind your back if odd. Non-zero amplitude at DC for types III
-## and IV is unaffected. If @var{x} is 'x', N will be unaffected, leaving the
-## responsability of having a correct result to the user.
+## The optional string argument @var{MatlabCompat} is either 'no' or 'n'.
+## Unspecified means it will behave the way Matlab's firls.m does: for type II
+## and IV FIRs that have non-zero amplitude near Nyquist, N will be incremented
+## behind your back if odd. Non-zero amplitude at DC for types III and IV is
+## unaffected. If specified, N will be unaffected, leaving the responsability
+## of having a correct result to the user.
 ##
 ## @var{a} must be the same length as @var{f}, and @var{k} must be half the
 ## length of @var{f}. @var{n} can be odd or even, and the resulting filters do
@@ -77,6 +78,10 @@
 ##
 ## 30th order, type I highpass:
 ## h = firls (30, [0, 0.3, 0.4, 1], [0, 0, 1, 1]);
+##
+## 31st order, type II highpass ('MatlabCompat' is not specified, so it
+## defaults to 'yes', which means N will be incremented, internally, to 32):
+## h = firls (31, [0, 0.3, 0.4, 1], [0, 0, 1, 1]);
 ##
 ## 31st order, type II lowpass:
 ## h = firls (31, [0, 0.3, 0.4, 1], [1, 1, 0, 0]);
@@ -97,21 +102,21 @@
 ## h = firls (43, [0, 0.3, 0.4, 1], [0, 0.3, 0, 0]*pi, [30, 1], 'd');
 ##
 ## 49th and 50th order Hilbert transformers:
-## h = firls (49, [0.1, 1.0], [1, 1], 'h'); # note the 1 at Nyquist
+## h = firls (49, [0.1, 1.0], [1, 1], 'h');  # note the 1 at Nyquist
 ## h = firls (50, [0.1, 0.9], [1, 1], 10, 'h');
 ##
 ## Oddities:
 ##
 ## 26th order, type IV weighted lowpass:
-## h = firls (26, [0, 0.3, 0.4, 1], [1, 1, 0, 0], [1, 26], 'h'); # or 'd'
+## h = firls (26, [0, 0.3, 0.4, 1], [1, 1, 0, 0], [1, 26], 'h');
 ##
 ## 25th order, type II and IV highpass
-## h = firls (25, [0, 0.3, 0.4, 1], [0, 0, 1, 1]);
-## h = firls (25, [0, 0.3, 0.4, 1], [0, 0, 1, 1], 'h');
+## h = firls (25, [0, 0.3, 0.4, 1], [0, 0, 1, 1], 'no');
+## h = firls (25, [0, 0.3, 0.4, 1], [0, 0, 1, 1], 'h', 'n');
 ##
 ## 35th order, type II and type IV bandstop:
-## h = firls (35, [0, 0.3, 0.4, 0.7, 0.8, 1], [1, 1, 0, 0, 1, 1], [1, 10, 1]);
-## h = firls (35, [0, 0.3, 0.4, 0.7, 0.8, 1], [1, 1, 0, 0, 1, 1], [1, 10, 1], 'h');
+## h = firls (35, [0, 0.3, 0.4, 0.7, 0.8, 1], [1, 1, 0, 0, 1, 1], [1, 10, 1], 'n');
+## h = firls (35, [0, 0.3, 0.4, 0.7, 0.8, 1], [1, 1, 0, 0, 1, 1], [1, 10, 1], 'h', 'n');
 ##
 ## The least squares optimization algorithm for computing FIR filter
 ## coefficients is derived in detail in:
@@ -122,7 +127,7 @@
 
 function h = firls (N, F, A, varargin);
 
-## Nr or arguments must be 3, 4, or 5
+## Nr or arguments must be between 3 and 6
 narginchk (3, 6);
 
 ## Order must be a one one element vector...
@@ -135,7 +140,7 @@ if ((N <= 0) || ischar (N))
 endif
 
 ## Handle the possible cases
-X = true;  # defaults to true, modify only according to varargin
+MatlabCompat = true;  # defaults to true, modify only according to varargin
 
 ## Three arguments => types I and II FIRs, unity weights
 if (nargin == 3)
@@ -155,8 +160,12 @@ if (length (varargin) == 1)
       case {"d" "differentiator"}
         f2 = 1;
         fType = 1;
-      case {"x"}
-        X = false;
+      case {"yes" "y"}
+        MatlabCompat = true;
+        fType = 0;
+        f2 = 0;
+      case {"no" "n"}
+        MatlabCompat = false;
         fType = 0;
         f2 = 0;
       otherwise
@@ -171,7 +180,7 @@ endif
 
 ## Five arguments
 if (length (varargin) == 2)
-  if (isnumeric (varargin{1}))  # if it's a number, it's K, then fType/X
+  if (isnumeric (varargin{1}))  # if it's a number, it's K, then fType/MatlabCompat
     K = varargin{1};
     switch (varargin{2})  # check that ftype is a proper char
       case {"h" "Hilbert" "hilbert"}
@@ -180,14 +189,18 @@ if (length (varargin) == 2)
       case {"d" "differentiator"}
         f2 = 1;
         fType = 1;
-      case {"x"}
-        X = false;
-        f2 = 0;
+      case {"yes" "y"}
+        MatlabCompat = true;
         fType = 0;
+        f2 = 0;
+      case {"no" "n"}
+        MatlabCompat = false;
+        fType = 0;
+        f2 = 0;
       otherwise
-        print_usage()
+        print_usage ()
     endswitch
-  else  # it's fType and X
+  else  # it's fType and MatlabCompat
     K = ones (1, length (F)/2);
     switch (varargin{1})  # check that ftype is a proper char
       case {"h" "Hilbert" "hilbert"}
@@ -199,11 +212,14 @@ if (length (varargin) == 2)
       otherwise
         error ("'fType' can only be one of 'd', 'differentiator', 'h', 'Hilbert', or 'hilbert'.")
     endswitch
-    if ( strcmpi ("x", varargin{2}) )
-      X = false;
-    else
-      error ("'X' can only be one of '' or 'x'.")
-    endif
+    switch (varargin{2})  # check for Matlab compatibility
+      case {"yes" "y"}
+        MatlabCompat = true;
+      case {"no" "n"}
+        MatlabCompat = false;
+      otherwise
+        error ("'MatlabCompat' can only be 'yes', 'y', 'no', or 'n'.")
+    endswitch
   endif
 endif
 
@@ -223,11 +239,14 @@ if (length (varargin) == 3)
     otherwise
       error ("'fType' can only be one of 'd', 'differentiator', 'h', 'Hilbert', or 'hilbert'.")
   endswitch
-  if ( strcmpi ("x", varargin{3}) )
-    X = false;
-  else
-    error ("'X' can only be one of '' or 'x'.")
-  endif
+  switch (varargin{3})  # check for Matlab compatibility
+    case {"yes" "y"}
+      MatlabCompat = true;
+    case {"no" "n"}
+      MatlabCompat = false;
+    otherwise
+      error ("'MatlabCompat' can only be 'yes', 'y', 'no', or 'n'.")
+  endswitch
 endif
 
 ## Check the lengths of the vectors
@@ -262,7 +281,7 @@ if ((length (F) > 2) && mod (F, 2))
 endif
 
 ## Silently consider the integer part of N
-if (X && F(end) && (mod (N, 2) != 0))
+if (MatlabCompat && A(end) && (mod (fix (N), 2) == 1) && (length (F) != 2))
   N = fix (N) + 1;
   sprintf ("Type II and IV FIRs can't have non-zero amplitude at Nyquist; N has been incremented.")
 else
@@ -478,6 +497,46 @@ endfunction
 %! A = [0, 0, 1, 1];
 %! h = firls (N, f, A)';
 %! assert (x, h, 1e-15);
+
+%!test
+%! x = [ 0.00511571272671417; ...
+%!       0.00493405217869004; ...
+%!      -0.00279778371495022; ...
+%!      -0.01105929461451940; ...
+%!      -0.00809289347003366; ...
+%!       0.00772325456420954; ...
+%!       0.02059174566420795; ...
+%!       0.01129984150603103; ...
+%!      -0.01787674250973394; ...
+%!      -0.03657304653575769; ...
+%!      -0.01406796414524765; ...
+%!       0.04065249080303993; ...
+%!       0.07086946533437199; ...
+%!       0.01594413922728205; ...
+%!      -0.12671979993303922; ...
+%!      -0.28244317530833674; ...
+%!       0.65005862309537055; ...
+%!      -0.28244317530833674; ...
+%!      -0.12671979993303922; ...
+%!       0.01594413922728205; ...
+%!       0.07086946533437199; ...
+%!       0.04065249080303993; ...
+%!      -0.01406796414524765; ...
+%!      -0.03657304653575769; ...
+%!      -0.01787674250973394; ...
+%!       0.01129984150603103; ...
+%!       0.02059174566420795; ...
+%!       0.00772325456420954; ...
+%!      -0.00809289347003366; ...
+%!      -0.01105929461451940; ...
+%!      -0.00279778371495022; ...
+%!       0.00493405217869004; ...
+%!       0.00511571272671417];
+%! N = 31;
+%! f = [0, 0.3, 0.4, 1];
+%! A = [0, 0, 1, 1];
+%! h = firls (N, f, A)';
+%! assert (x, h, 1e-15)
 
 %!test
 %! x = [-5.72090574085339e-03; ...
@@ -1002,7 +1061,7 @@ endfunction
 %! N = 25;
 %! f = [0 0.3 0.4 1];
 %! A = [0, 0, 1, 1];
-%! h = firls (N, f, A)';
+%! h = firls (N, f, A, 'no')';
 %! assert (x, h, 1e-15);
 
 %!test
@@ -1035,7 +1094,7 @@ endfunction
 %! N = 25;
 %! f = [0 0.3 0.4 1];
 %! A = [0, 0, 1, 1];
-%! h = firls (N, f, A, 'h')';
+%! h = firls (N, f, A, 'h', 'n')';
 %! assert (x, h, 1e-15);
 
 %!test
@@ -1079,7 +1138,7 @@ endfunction
 %! f = [0, 0.3, 0.4, 0.7, 0.8, 1];
 %! A = [1, 1, 0, 0, 1, 1];
 %! K = [1, 10, 1];
-%! h = firls (N, f, A, K)';
+%! h = firls (N, f, A, K, 'n')';
 %! assert (x, h, 1e-15);
 
 %!test
@@ -1123,7 +1182,7 @@ endfunction
 %! f = [0, 0.3, 0.4, 0.7, 0.8, 1];
 %! A = [1, 1, 0, 0, 1, 1];
 %! K = [1, 10, 1];
-%! h = firls (N, f, A, K, 'h')';
+%! h = firls (N, f, A, K, 'h', 'n')';
 %! assert (x, h, 1e-15);
 
 %% tests
@@ -1151,3 +1210,7 @@ endfunction
 %!error h = firls (9, [0 .3 .6 1], [1 1 0 0], 'bla')
 %!error h = firls ("9", [0 .3 .6 1], [1 1 0 0],['a', 'b'])
 %!error h = firls (9, [0 .6 .3 1], [1 1 0 0])
+%!error h = firls (9, [0 .3 .6 1], [1 1 0 0], 'nope')
+%!error h = firls (9, [0 .3 .6 1], [1 1 0 0], [1 10], 'nope')
+%!error h = firls (9, [0 .3 .6 1], [1 1 0 0], 'd', 'nope')
+%!error h = firls (9, [0 .3 .6 1], [1 1 0 0], [1 10], 'h', 'nope')
