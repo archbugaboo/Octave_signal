@@ -218,7 +218,7 @@ if (length (varargin) == 2)
       case {"no" "n"}
         MatlabCompat = false;
       otherwise
-        error ("'MatlabCompat' can only be 'yes', 'y', 'no', or 'n'.")
+        error ("'MatlabCompat' can only be 'no' or 'n'.")
     endswitch
   endif
 endif
@@ -245,7 +245,7 @@ if (length (varargin) == 3)
     case {"no" "n"}
       MatlabCompat = false;
     otherwise
-      error ("'MatlabCompat' can only be 'yes', 'y', 'no', or 'n'.")
+      error ("'MatlabCompat' can only be 'no' or 'n'.")
   endswitch
 endif
 
