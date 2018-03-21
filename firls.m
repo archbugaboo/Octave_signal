@@ -124,95 +124,130 @@
 ## I. Selesnick, "Linear-Phase FIR Filter Design by Least Squares,"
 ## http://cnx.org/content/m10577
 ## @end deftypefn
+##
+## changelog:
+## 2018.03.21 - reverted the behaviour of narginchk() to print_usage, and
+##              indented the body of text between function and endfunction, as
+##              suggested in the comments (Savannah bugs #51310, comment #9);
 
 function h = firls (N, F, A, varargin);
 
-## Nr or arguments must be between 3 and 6
-narginchk (3, 6);
+  ## Nr or arguments must be between 3 and 6
+  #narginchk (3, 6); # suggested previous behaviour
+  if (nargin < 3 || nargin > 6)
+    print_usage;
+  endif
 
-## Order must be a one one element vector...
-if (length (N) != 1)
-  error ("The order (N) must be a vector of size 1.")
-endif
-## ...and proper valued
-if ((N <= 0) || ischar (N))
-  error ("The order (N) must be positive definite.")
-endif
+  ## Order must be a one one element vector...
+  if (length (N) != 1)
+    error ("The order (N) must be a vector of size 1.")
+  endif
+  ## ...and proper valued
+  if ((N <= 0) || ischar (N))
+    error ("The order (N) must be positive definite.")
+  endif
 
-## Handle the possible cases
-MatlabCompat = true;  # defaults to true, modify only according to varargin
+  ## Handle the possible cases
+  MatlabCompat = true;  # defaults to true, modify only according to varargin
 
-## Three arguments => types I and II FIRs, unity weights
-if (nargin == 3)
-  K = ones (1, length (F)/2);
-  fType = 0;
-  f2 = 0;
-endif
-
-## Four arguments
-if (length (varargin) == 1)
-  if (ischar (varargin{1})) # diff or HT, or 'x'
+  ## Three arguments => types I and II FIRs, unity weights
+  if (nargin == 3)
     K = ones (1, length (F)/2);
-    switch (varargin{1})  # check that ftype is a proper char
-      case {"h" "Hilbert" "hilbert"}
-        f2 = 0;
-        fType = 1;
-      case {"d" "differentiator"}
-        f2 = 1;
-        fType = 1;
-      case {"yes" "y"}
-        MatlabCompat = true;
-        fType = 0;
-        f2 = 0;
-      case {"no" "n"}
-        MatlabCompat = false;
-        fType = 0;
-        f2 = 0;
-      otherwise
-        print_usage()
-    endswitch
-  else  # type I or II FIR
-    K = varargin{1};
     fType = 0;
     f2 = 0;
   endif
-endif
 
-## Five arguments
-if (length (varargin) == 2)
-  if (isnumeric (varargin{1}))  # if it's a number, it's K, then fType/MatlabCompat
-    K = varargin{1};
+  ## Four arguments
+  if (length (varargin) == 1)
+    if (ischar (varargin{1})) # diff or HT, or 'x'
+      K = ones (1, length (F)/2);
+      switch (varargin{1})  # check that ftype is a proper char
+        case {"h" "Hilbert" "hilbert"}
+          f2 = 0;
+          fType = 1;
+        case {"d" "differentiator"}
+          f2 = 1;
+          fType = 1;
+        case {"yes" "y"}
+          MatlabCompat = true;
+          fType = 0;
+          f2 = 0;
+        case {"no" "n"}
+          MatlabCompat = false;
+          fType = 0;
+          f2 = 0;
+        otherwise
+          print_usage()
+      endswitch
+    else  # type I or II FIR
+      K = varargin{1};
+      fType = 0;
+      f2 = 0;
+    endif
+  endif
+
+  ## Five arguments
+  if (length (varargin) == 2)
+    if (isnumeric (varargin{1}))  # if it's a number, it's K, then fType/MatlabCompat
+      K = varargin{1};
+      switch (varargin{2})  # check that ftype is a proper char
+        case {"h" "Hilbert" "hilbert"}
+          f2 = 0;
+          fType = 1;
+        case {"d" "differentiator"}
+          f2 = 1;
+          fType = 1;
+        case {"yes" "y"}
+          MatlabCompat = true;
+          fType = 0;
+          f2 = 0;
+        case {"no" "n"}
+          MatlabCompat = false;
+          fType = 0;
+          f2 = 0;
+        otherwise
+          print_usage ()
+      endswitch
+    else  # it's fType and MatlabCompat
+      K = ones (1, length (F)/2);
+      switch (varargin{1})  # check that ftype is a proper char
+        case {"h" "Hilbert" "hilbert"}
+          f2 = 0;
+          fType = 1;
+        case {"d" "differentiator"}
+          f2 = 1;
+          fType = 1;
+        otherwise
+          error ("'fType' can only be one of 'd', 'differentiator', 'h', 'Hilbert', or 'hilbert'.")
+      endswitch
+      switch (varargin{2})  # check for Matlab compatibility
+        case {"yes" "y"}
+          MatlabCompat = true;
+        case {"no" "n"}
+          MatlabCompat = false;
+        otherwise
+          error ("'MatlabCompat' can only be 'no' or 'n'.")
+      endswitch
+    endif
+  endif
+
+  ## Six arguments
+  if (length (varargin) == 3)
+    fType = 1;  # it can only be one of the types III or IV
+    if (isnumeric (varargin{1}))  # make sure K is a number
+      K = varargin{1};
+    else
+      error ("The weights vector must be numeric.")
+    endif
     switch (varargin{2})  # check that ftype is a proper char
       case {"h" "Hilbert" "hilbert"}
         f2 = 0;
-        fType = 1;
       case {"d" "differentiator"}
         f2 = 1;
-        fType = 1;
-      case {"yes" "y"}
-        MatlabCompat = true;
-        fType = 0;
-        f2 = 0;
-      case {"no" "n"}
-        MatlabCompat = false;
-        fType = 0;
-        f2 = 0;
-      otherwise
-        print_usage ()
-    endswitch
-  else  # it's fType and MatlabCompat
-    K = ones (1, length (F)/2);
-    switch (varargin{1})  # check that ftype is a proper char
-      case {"h" "Hilbert" "hilbert"}
-        f2 = 0;
-        fType = 1;
-      case {"d" "differentiator"}
-        f2 = 1;
-        fType = 1;
       otherwise
         error ("'fType' can only be one of 'd', 'differentiator', 'h', 'Hilbert', or 'hilbert'.")
     endswitch
-    switch (varargin{2})  # check for Matlab compatibility
+    switch (varargin{3})  # check for Matlab compatibility
       case {"yes" "y"}
         MatlabCompat = true;
       case {"no" "n"}
@@ -221,241 +256,214 @@ if (length (varargin) == 2)
         error ("'MatlabCompat' can only be 'no' or 'n'.")
     endswitch
   endif
-endif
 
-## Six arguments
-if (length (varargin) == 3)
-  fType = 1;  # it can only be one of the types III or IV
-  if (isnumeric (varargin{1}))  # make sure K is a number
-    K = varargin{1};
+  ## Check the lengths of the vectors
+  if (length (F) != length (A))
+    error ("The sizes of the frequency and magnitude vectors must be equal.")
+  endif
+
+  if ((length (varargin) >= 1) && ! ischar (varargin{1}) && ...
+      (length (varargin{1}) != length (F)/2))
+    error ("The length of the weights vector must be half the length of the frequencies', or the amplitudes'.")
+  endif
+
+  if (rem (length (F), 2) || rem (length (A), 2))
+    error ("The frequency and weight vectors must have an even size greater than or equal to 2.")
+  endif
+
+  ## Lengths alright? Check for correctness.
+  if (sum (diff (F) <= 0))
+    error ("The frequencies must be strictly increasing.")
+  endif
+
+  if ((F(1) < 0) || (F(end) > 1))
+    error ("The frequencies must lie in the interval [0..1], with 1 being Nyquist.")
+  endif
+
+  if ((length (F) != 2) && (F(1) != 0))
+    error ("The frequency vector must start at 0.")
+  endif
+
+  if ((length (F) > 2) && mod (F, 2))
+    error ("The frequency vector must have an even length.")
+  endif
+
+  ## Silently consider the integer part of N
+  if (MatlabCompat && A(end) && (mod (fix (N), 2) == 1) && (length (F) != 2))
+    N = fix (N) + 1;
+    sprintf ("Type II and IV FIRs can't have non-zero amplitude at Nyquist; N has been incremented.")
   else
-    error ("The weights vector must be numeric.")
+    N = fix (N);
   endif
-  switch (varargin{2})  # check that ftype is a proper char
-    case {"h" "Hilbert" "hilbert"}
-      f2 = 0;
-    case {"d" "differentiator"}
-      f2 = 1;
-    otherwise
-      error ("'fType' can only be one of 'd', 'differentiator', 'h', 'Hilbert', or 'hilbert'.")
-  endswitch
-  switch (varargin{3})  # check for Matlab compatibility
-    case {"yes" "y"}
-      MatlabCompat = true;
-    case {"no" "n"}
-      MatlabCompat = false;
-    otherwise
-      error ("'MatlabCompat' can only be 'no' or 'n'.")
-  endswitch
-endif
 
-## Check the lengths of the vectors
-if (length (F) != length (A))
-  error ("The sizes of the frequency and magnitude vectors must be equal.")
-endif
+  ## Make sure the vectors are columns
+  A = A(:)';
+  F = F(:)';
+  ## Make K the same length as F and A, to avoid indexing with floor((i+1)/2.
+  ## Also make it alternating signs, to avoid the need of (-1)^n later on.
+  K = [-abs(K); abs(K)](:)';
 
-if ((length (varargin) >= 1) && ! ischar (varargin{1}) && ...
-    (length (varargin{1}) != length (F)/2))
-  error ("The length of the weights vector must be half the length of the frequencies', or the amplitudes'.")
-endif
+  ## Prepare a few helpers
+  oddN = mod (N, 2);
+  M = floor (N/2);
+  bands = length (F);
+  w = F*pi;
+  A0 = fType*(1 - oddN);
+  pi2 = pi/2;
+  i1 = 1:2:bands;
+  i2 = 2:2:bands;
+  ## Non-zero band check. Note: this doesn't work for Hilbert transformer.
+  bandTest = A(i1) + A(i2);
+  bandTest = [bandTest; bandTest](:)';
 
-if (rem (length (F), 2) || rem (length (A), 2))
-  error ("The frequency and weight vectors must have an even size greater than or equal to 2.")
-endif
+  ################################################################################
+  ## Using 1/f^2 weighting means starting from the definition of q with W = 1/w^2
+  ## and, with the help of Stegun's Handbook of Mathematical Functions, wxMaxima,
+  ## and Wolframalpha:
+  ##
+  ##      ,-
+  ##     /  cos(n*pi*f)                           cos(n*pi*f)
+  ##    /  ------------- df = -n*pi*Si(n*pi*f) - ------------- + C
+  ##   /        f*f                                    f
+  ## -'
+  ##
+  ## where Si(x) is the sine integral. In Octave, expint() is defined, so:
+  ##
+  ##  Si(x) = imag(expint(1i*x)) + pi/2
+  ##  Ci(x) = -real(expint(1i*x))
+  ################################################################################
 
-## Lengths alright? Check for correctness.
-if (sum (diff (F) <= 0))
-  error ("The frequencies must be strictly increasing.")
-endif
-
-if ((F(1) < 0) || (F(end) > 1))
-  error ("The frequencies must lie in the interval [0..1], with 1 being Nyquist.")
-endif
-
-if ((length (F) != 2) && (F(1) != 0))
-  error ("The frequency vector must start at 0.")
-endif
-
-if ((length (F) > 2) && mod (F, 2))
-  error ("The frequency vector must have an even length.")
-endif
-
-## Silently consider the integer part of N
-if (MatlabCompat && A(end) && (mod (fix (N), 2) == 1) && (length (F) != 2))
-  N = fix (N) + 1;
-  sprintf ("Type II and IV FIRs can't have non-zero amplitude at Nyquist; N has been incremented.")
-else
-  N = fix (N);
-endif
-
-## Make sure the vectors are columns
-A = A(:)';
-F = F(:)';
-## Make K the same length as F and A, to avoid indexing with floor((i+1)/2.
-## Also make it alternating signs, to avoid the need of (-1)^n later on.
-K = [-abs(K); abs(K)](:)';
-
-## Prepare a few helpers
-oddN = mod (N, 2);
-M = floor (N/2);
-bands = length (F);
-w = F*pi;
-A0 = fType*(1 - oddN);
-pi2 = pi/2;
-i1 = 1:2:bands;
-i2 = 2:2:bands;
-## Non-zero band check. Note: this doesn't work for Hilbert transformer.
-bandTest = A(i1) + A(i2);
-bandTest = [bandTest; bandTest](:)';
-
-################################################################################
-## Using 1/f^2 weighting means starting from the definition of q with W = 1/w^2
-## and, with the help of Stegun's Handbook of Mathematical Functions, wxMaxima,
-## and Wolframalpha:
-##
-##      ,-
-##     /  cos(n*pi*f)                           cos(n*pi*f)
-##    /  ------------- df = -n*pi*Si(n*pi*f) - ------------- + C
-##   /        f*f                                    f
-## -'
-##
-## where Si(x) is the sine integral. In Octave, expint() is defined, so:
-##
-##  Si(x) = imag(expint(1i*x)) + pi/2
-##  Ci(x) = -real(expint(1i*x))
-################################################################################
-
-## Calculate q
-n = (0:N+2*A0)'; # make it column vector from the start
-q = zeros (size (n));
-## Matlab uses 1/f^2 weighting only in the passband(s)
-## FIXME the two for loops can be merged at the cost of having for(if()), which
-## whould be worse than if(for()), but which takes up more code, same for the
-## b vector below; worth it?
-ghostTweak = 4;  # FIXME empirically determined. <b>WHY?!</b>
-## FIXME if (for (if (if ())))...?
-if (f2)  # 1/f^2 weighting
-  for (m = 1:bands)
-    if (bandTest(m))  # 1/f^2 weighting
-      if (m == 1)  # take care of F(1)=0
-        q -= 0.0;
+  ## Calculate q
+  n = (0:N+2*A0)'; # make it column vector from the start
+  q = zeros (size (n));
+  ## Matlab uses 1/f^2 weighting only in the passband(s)
+  ## FIXME the two for loops can be merged at the cost of having for(if()), which
+  ## whould be worse than if(for()), but which takes up more code, same for the
+  ## b vector below; worth it?
+  ghostTweak = 4;  # FIXME empirically determined. <b>WHY?!</b>
+  ## FIXME if (for (if (if ())))...?
+  if (f2)  # 1/f^2 weighting
+    for (m = 1:bands)
+      if (bandTest(m))  # 1/f^2 weighting
+        if (m == 1)  # take care of F(1)=0
+          q -= 0.0;
+        else
+          q -= ghostTweak*K(m)*(-pi*n.*(imag(E1(1i*n*w(m))) + pi2) - ...
+            cos(n*w(m))/F(m));
+        endif
       else
-        q -= ghostTweak*K(m)*(-pi*n.*(imag(E1(1i*n*w(m))) + pi2) - ...
-          cos(n*w(m))/F(m));
+        q -= K(m)*F(m)*sinc(n*F(m));
       endif
-    else
-      q -= K(m)*F(m)*sinc(n*F(m));
-    endif
-  endfor
-else
-  for (m = 1:bands)
-    q += K(m)*F(m)*sinc(n*F(m));
-  endfor
-endif
-
-## Use q to build the Q matrix
-Q = toeplitz(q(1:M+1-A0)) + ...
-  (-1)^fType*hankel(q(1+oddN+2*A0 : M+1+oddN+A0), q(M+1+oddN+A0 : N+1));
-
-################################################################################
-## In the same way q was derived, for the b vector, D(w) is a piecewise linear
-## function, so it can be approximated as ax+b. The derivation is shown for
-## sine, it's similar for cosine (needed only for types I and II):
-##
-##      ,-
-##     /  (a*f + b)*sin(n*pi*f)
-##    /  ----------------------- df = a*Si(n*pi*f) +
-##   /              f*f
-## -'                                    _                                 _
-##                                      |                    sin(n*pi*f)   |
-##                                    b*| pi*n*Ci(n*pi*f) - -------------  | + C
-##                                      |_                       f        _|
-##
-## and ax+b is the linear interpolation of A and F vectors:
-##
-##  A[n+1] - A[n]
-## ---------------*(x - F[n]) + A[n]
-##  F[n+1] - F[n]
-################################################################################
-
-## Adapted from original firls.m to include all types (I - IV) of filters.
-n = (A0+0.5*oddN : M+0.5*oddN)';  # make column vector from the start
-if (oddN)
-  n2 = n;
-  n3 = n;
-else
-  n2 = n(2:end);
-  n3 = [1; n(2:end)];
-endif
-
-## First check for 1/f^2, even if the order looks awkward, because the expint
-## only needs to be calculated once, then picked apart with real() and imag().
-## FIXME if (for (if (if ())))...?
-if (f2)  # 1/f^2 weighting
-  sc = zeros (size (n));
-  dif = zeros (size (n));
-  tmp = zeros (size (n));
-  for (m = 1:bands)  # passband only
-    l = m - 1 + mod (m, 2);
-    if (bandTest(m))  # apply 1/f^2 weighting in the passband, only
-      slope = (A(l+1) - A(l))/(F(l+1) - F(l));
-      intercept = -slope*F(m) + A(m);
-      if (m == 1)  # take care of F(1)=0
-        ## It seems there's no difference with/without tmp for F(1)=0, so just
-        ## consider the singularities for Ci(x) and cos(x)/x as zero. This way
-        ## numerical problems for large numbers are avoided in the case of
-        ## e.g. Ci(1e-6), or cos(1e-6)/1e-6.
-        sc += -K(m)*intercept*pi*n;
-      else
-        tmp = E1(1.0i*n*w(m));
-        sc += K(m)*(slope*(imag (tmp) + pi2) + ...
-          intercept*(pi*n.*(-real (tmp)) - sin(n*w(m))/F(m)));
-      endif
-    else  # stopband only
-      AK = A(m)*K(m);
-      if (! oddN && ! fType)  # odd lengths need special treatment
-        sc += AK*[w(m); sin(n2*w(m))];
-        dif += AK*[0.5*(w(l)^2 - w(l+1)^2)/(w(l+1) - w(l)); ...
-          (cos(n2*w(l+1)) - cos(n2*w(l)))./(n2*(w(l+1) - w(l)))];
-      else
-        sc += AK*sin(n*w(m));
-        dif += AK*(cos(n*w(l+1)) - cos(n*w(l)))./(n*(w(l+1) - w(l)));
-      endif
-    endif
-  endfor
-  b = ghostTweak*(dif + sc);
-else  # K decides the weighting
-  sc = zeros (length (n), bands);
-  dif = zeros (length (n), bands/2);
-  if(fType)  # types III, IV
-    sc = -cos(n*w);
-    dif = [sin(n*w(i2)) - sin(n*w(i1))]./(n*(w(i2) - w(i1)));
-  else  # types I, II
-    if (! oddN)  # odd lengths need special treatment
-      sc = [w; sin(n2*w)];
-      dif = [0.5*(w(i1).^2 - w(i2).^2)./(w(i2) - w(i1)); ...
-        (cos(n2*w(i2)) - cos(n2*w(i1)))./(n2*(w(i2) - w(i1)))];
-    else
-      sc = sin(n*w);
-      dif = (cos(n*w(i2)) - cos(n*w(i1)))./(n*(w(i2) - w(i1)));
-    endif
-  endif
-  b = (kron (dif, [1, 1]) + sc)*(K.*A)(:)./(pi*n3);
-endif
-
-## The rest of the algorithm
-a = Q\b;
-
-## Form the impulse response
-if (oddN)
-  h = [(-1)^fType*flipud(a); a]';
-else
-  if (fType)
-    h = [-flipud(a); 0; a]';
+    endfor
   else
-    h = [a(end:-1:2); 2*a(1); a(2:end)]';
+    for (m = 1:bands)
+      q += K(m)*F(m)*sinc(n*F(m));
+    endfor
   endif
-endif
+
+  ## Use q to build the Q matrix
+  Q = toeplitz(q(1:M+1-A0)) + ...
+    (-1)^fType*hankel(q(1+oddN+2*A0 : M+1+oddN+A0), q(M+1+oddN+A0 : N+1));
+
+  ################################################################################
+  ## In the same way q was derived, for the b vector, D(w) is a piecewise linear
+  ## function, so it can be approximated as ax+b. The derivation is shown for
+  ## sine, it's similar for cosine (needed only for types I and II):
+  ##
+  ##      ,-
+  ##     /  (a*f + b)*sin(n*pi*f)
+  ##    /  ----------------------- df = a*Si(n*pi*f) +
+  ##   /              f*f
+  ## -'                                    _                                 _
+  ##                                      |                    sin(n*pi*f)   |
+  ##                                    b*| pi*n*Ci(n*pi*f) - -------------  | + C
+  ##                                      |_                       f        _|
+  ##
+  ## and ax+b is the linear interpolation of A and F vectors:
+  ##
+  ##  A[n+1] - A[n]
+  ## ---------------*(x - F[n]) + A[n]
+  ##  F[n+1] - F[n]
+  ################################################################################
+
+  ## Adapted from original firls.m to include all types (I - IV) of filters.
+  n = (A0+0.5*oddN : M+0.5*oddN)';  # make column vector from the start
+  if (oddN)
+    n2 = n;
+    n3 = n;
+  else
+    n2 = n(2:end);
+    n3 = [1; n(2:end)];
+  endif
+
+  ## First check for 1/f^2, even if the order looks awkward, because the expint
+  ## only needs to be calculated once, then picked apart with real() and imag().
+  ## FIXME if (for (if (if ())))...?
+  if (f2)  # 1/f^2 weighting
+    sc = zeros (size (n));
+    dif = zeros (size (n));
+    tmp = zeros (size (n));
+    for (m = 1:bands)  # passband only
+      l = m - 1 + mod (m, 2);
+      if (bandTest(m))  # apply 1/f^2 weighting in the passband, only
+        slope = (A(l+1) - A(l))/(F(l+1) - F(l));
+        intercept = -slope*F(m) + A(m);
+        if (m == 1)  # take care of F(1)=0
+          ## It seems there's no difference with/without tmp for F(1)=0, so just
+          ## consider the singularities for Ci(x) and cos(x)/x as zero. This way
+          ## numerical problems for large numbers are avoided in the case of
+          ## e.g. Ci(1e-6), or cos(1e-6)/1e-6.
+          sc += -K(m)*intercept*pi*n;
+        else
+          tmp = E1(1.0i*n*w(m));
+          sc += K(m)*(slope*(imag (tmp) + pi2) + ...
+            intercept*(pi*n.*(-real (tmp)) - sin(n*w(m))/F(m)));
+        endif
+      else  # stopband only
+        AK = A(m)*K(m);
+        if (! oddN && ! fType)  # odd lengths need special treatment
+          sc += AK*[w(m); sin(n2*w(m))];
+          dif += AK*[0.5*(w(l)^2 - w(l+1)^2)/(w(l+1) - w(l)); ...
+            (cos(n2*w(l+1)) - cos(n2*w(l)))./(n2*(w(l+1) - w(l)))];
+        else
+          sc += AK*sin(n*w(m));
+          dif += AK*(cos(n*w(l+1)) - cos(n*w(l)))./(n*(w(l+1) - w(l)));
+        endif
+      endif
+    endfor
+    b = ghostTweak*(dif + sc);
+  else  # K decides the weighting
+    sc = zeros (length (n), bands);
+    dif = zeros (length (n), bands/2);
+    if(fType)  # types III, IV
+      sc = -cos(n*w);
+      dif = [sin(n*w(i2)) - sin(n*w(i1))]./(n*(w(i2) - w(i1)));
+    else  # types I, II
+      if (! oddN)  # odd lengths need special treatment
+        sc = [w; sin(n2*w)];
+        dif = [0.5*(w(i1).^2 - w(i2).^2)./(w(i2) - w(i1)); ...
+          (cos(n2*w(i2)) - cos(n2*w(i1)))./(n2*(w(i2) - w(i1)))];
+      else
+        sc = sin(n*w);
+        dif = (cos(n*w(i2)) - cos(n*w(i1)))./(n*(w(i2) - w(i1)));
+      endif
+    endif
+    b = (kron (dif, [1, 1]) + sc)*(K.*A)(:)./(pi*n3);
+  endif
+
+  ## The rest of the algorithm
+  a = Q\b;
+
+  ## Form the impulse response
+  if (oddN)
+    h = [(-1)^fType*flipud(a); a]';
+  else
+    if (fType)
+      h = [-flipud(a); 0; a]';
+    else
+      h = [a(end:-1:2); 2*a(1); a(2:end)]';
+    endif
+  endif
 
 endfunction
 
